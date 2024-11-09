@@ -68,4 +68,16 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    implementation ("com.google.accompanist:accompanist-permissions:0.36.0")
+    implementation ("androidx.activity:activity-ktx:1.7.2")
+    implementation ("androidx.compose.ui:ui:1.5.1")
+    implementation ("io.coil-kt:coil-compose:2.4.0")
+
+    val camerax_version = "1.5.0-alpha03"
+    implementation("androidx.camera:camera-camera2:${camerax_version}")
+    implementation("androidx.camera:camera-lifecycle:${camerax_version}")
+    implementation("androidx.camera:camera-view:${camerax_version}")
+    implementation("androidx.camera:camera-extensions:${camerax_version}")
+
 }

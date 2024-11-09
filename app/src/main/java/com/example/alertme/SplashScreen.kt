@@ -9,8 +9,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.delay
 
 @Composable
@@ -33,8 +35,15 @@ fun SplashScreen(navController: NavController) {
     // Navigasi setelah delay
     androidx.compose.runtime.LaunchedEffect(key1 = true) {
         delay(3000) // Durasi splash screen (3 detik)
-        navController.navigate("home") { // Ganti "home" dengan nama rute utama aplikasi
+        navController.navigate("welcome") { // Ganti "home" dengan nama rute utama aplikasi
             popUpTo("splash") { inclusive = true }
         }
     }
+}
+
+@Preview
+@Composable
+fun PreviewSplashScreen(){
+    val navController = rememberNavController()
+    SplashScreen(navController = navController)
 }

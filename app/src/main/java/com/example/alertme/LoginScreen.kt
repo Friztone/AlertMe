@@ -15,13 +15,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun LoginScreen(navController: NavController) {
-    // State untuk input email dan password
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -68,9 +69,11 @@ fun LoginScreen(navController: NavController) {
                 // Tombol Masuk
                 Button(
                     onClick = {
-                        // Tambahkan logika login, misalnya validasi email dan password
-                        println("Email: $email, Password: $password")
+                        if (email.isNotBlank() && password.isNotBlank()) {
+                            navController.navigate("home")
+                        }
                     },
+                    enabled = email.isNotBlank() && password.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3E4E88)),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -85,42 +88,13 @@ fun LoginScreen(navController: NavController) {
                     modifier = Modifier.align(Alignment.End)
                 )
             }
-
-            // Social login
-            Text(
-                text = "Atau masuk dengan:",
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 8.dp)
-            ) {
-                Image(
-                    painter = painterResource(id = R.mipmap.google_logo_foreground), // Ganti dengan ikon Google
-                    contentDescription = "Google Login",
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-
-            // Signup link
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Belum punya akun? ", fontSize = 14.sp)
-                Text(
-                    text = "Daftar",
-                    fontSize = 14.sp,
-                    color = Color.Blue,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { navController.navigate("register") }
-                )
-            }
         }
     }
+}
+
+@Preview
+@Composable
+fun PreviewLoginScreen(){
+    val navController = rememberNavController() // Membuat NavController untuk preview
+    LoginScreen(navController = navController)
 }
