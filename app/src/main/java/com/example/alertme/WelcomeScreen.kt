@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -80,10 +81,11 @@ fun WelcomeScreen( navController: NavController) {
                 Button(
                     onClick = {navController.navigate("login")},
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3E4E88)),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
+                        .shadow(1.dp, shape = RoundedCornerShape(16.dp))
                 ) {
                     Text(
                         text = "Mulai",
@@ -100,10 +102,11 @@ fun WelcomeScreen( navController: NavController) {
                         context.startActivity(intent)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD9534F)),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
+                        .shadow(1.dp, shape = RoundedCornerShape(16.dp))
                 ) {
                     Text(
                         text = "Panggilan darurat",

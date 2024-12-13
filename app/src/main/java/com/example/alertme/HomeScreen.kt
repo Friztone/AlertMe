@@ -1,7 +1,13 @@
 package com.example.alertme
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.webkit.WebStorage
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -21,10 +28,45 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.platform.LocalContext
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
+import android.webkit.CookieManager
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
+
+    fun logoutUser(context: Context) {
+        // Hapus sesi Firebase
+        FirebaseAuth.getInstance().signOut()
+
+        // Logout dari Google
+        val googleSignInClient = GoogleSignIn.getClient(
+            context,
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
+        )
+        googleSignInClient.signOut()
+
+        // Hapus semua cookie (untuk aplikasi yang menggunakan WebView)
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies(null)
+        cookieManager.flush()
+
+        // Bersihkan cache aplikasi
+        context.cacheDir.deleteRecursively()
+
+        // Berikan konfirmasi logout kepada pengguna
+        Toast.makeText(context, "Logout berhasil. Anda dapat login dengan akun lain.", Toast.LENGTH_SHORT).show()
+    }
+
+
+    val context = LocalContext.current // Mendapatkan context untuk memulai Intent
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -37,13 +79,16 @@ fun HomeScreen(navController: NavController) {
                     )
                 },
                 actions = {
-                    IconButton(onClick = { /* Navigate to Settings */ }) {
+                    IconButton(onClick = {navController.navigate("settings")}) {
                         Icon(Icons.Filled.Build, contentDescription = "Settings", tint = Color.White)
                     }
                     IconButton(onClick = { /* Navigate to Notifications */ }) {
                         Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
-                    IconButton(onClick = { /* Handle Logout */ }) {
+                    IconButton(onClick = {
+                        logoutUser(context)
+                        navController.navigate("login")
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout", tint = Color.White)
                     }
                 },
@@ -54,7 +99,7 @@ fun HomeScreen(navController: NavController) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(color = Color(0xFFF7F6F2))
+                    .background(color = Color(0xFFFAF2E8))
                     .padding(paddingValues)
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -63,7 +108,8 @@ fun HomeScreen(navController: NavController) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(128.dp),
+                        .height(128.dp)
+                        .padding(top = 16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFDAE3F7)),
                     shape = RoundedCornerShape(12.dp),
                     elevation = CardDefaults.cardElevation(4.dp)
@@ -89,25 +135,48 @@ fun HomeScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = { /* TODO */ },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                        onClick = {navController.navigate("guide")},
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .shadow(2.dp, shape = RoundedCornerShape(12.dp))
+                            .height(40.dp),
+                        shape = RoundedCornerShape(12.dp)
+
                     ) {
-                        Text(text = "Panduan", color = Color.White)
+                        Text(
+                            text = "Panduan",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                     Button(
-                        onClick = { /* TODO */ },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5C5C))
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:119")
+                            }
+                            context.startActivity(intent)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5C5C)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .shadow(2.dp, shape = RoundedCornerShape(12.dp))
+                            .height(40.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(text = "Darurat", color = Color.White)
+                        Text(
+                            text = "Darurat",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+
+                        )
                     }
                 }
 
                 Text(
                     text = "Buat laporan",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    fontSize = 20.sp,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
@@ -168,13 +237,13 @@ fun ReportCard(title: String, iconRes: Int, backgroundColor: Color, nav: String,
             Image(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(72.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = title,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
                 color = Color(0xFF444444)
             )
         }

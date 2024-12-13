@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -61,6 +62,10 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.firebase.common.ktx)
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -68,11 +73,12 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation (libs.play.services.auth)
 
-    implementation ("com.google.accompanist:accompanist-permissions:0.36.0")
-    implementation ("androidx.activity:activity-ktx:1.7.2")
-    implementation ("androidx.compose.ui:ui:1.5.1")
-    implementation ("io.coil-kt:coil-compose:2.4.0")
+    implementation (libs.accompanist.permissions)
+    implementation (libs.androidx.activity.ktx)
+    implementation (libs.ui)
+    implementation (libs.coil.compose)
 
     val camerax_version = "1.5.0-alpha03"
     implementation("androidx.camera:camera-camera2:${camerax_version}")

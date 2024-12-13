@@ -54,7 +54,6 @@ fun VerificationScreen(contentResolver: ContentResolver, navController: NavContr
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
             .background(Color(0xFFFAF2E8)),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)

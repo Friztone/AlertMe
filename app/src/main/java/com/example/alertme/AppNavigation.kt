@@ -11,20 +11,29 @@ import androidx.compose.ui.platform.LocalContext
 fun AppNavigation(navController: NavHostController) {
     val ContentResolver = LocalContext.current.contentResolver
 
-    NavHost(navController = navController, startDestination = "home") {
+    NavHost(navController = navController, startDestination = "splash") {
         composable("splash") { SplashScreen(navController) }
         composable("welcome") { WelcomeScreen(navController) }
         composable("login") { LoginScreen(navController) }
         composable("register") { RegisterScreen(navController) }
-        composable("verification") { VerificationScreen(contentResolver = ContentResolver, navController) }
+        composable("verification") { VerificationScreen(ContentResolver, navController) }
         composable("home") { HomeScreen(navController) }
         composable("detail_pemadam") { DetailPemadam(navController) }
         composable("detail_polisi") { DetailPolisi(navController) }
         composable("detail_rs") { DetailRumahSakit(navController) }
         composable("detail_bpbd") { DetailBPBD(navController) }
+        composable("guide") { GuideScreen(navController) }
+        composable("settings") { SettingsScreen(navController) }
+        composable("change_name") { ChangeNameScreen(navController) }
+        composable("change_password") { ChangePasswordScreen(navController) }
+        composable("history") { HistoryScreen(navController) }
+        composable("detail_history/{uuid}") { backStackEntry ->
+            val uuid = backStackEntry.arguments?.getString("uuid") ?: ""
+            DetailHistoryScreen(
+                navController = navController,
+                uuid = uuid,
 
-
-
+            )
+        }
     }
 }
-
