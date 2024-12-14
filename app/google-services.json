@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "51636599168",
+    "project_id": "alertme-8032b",
+    "storage_bucket": "alertme-8032b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:51636599168:android:de071cb760136279fd2965",
+        "android_client_info": {
+          "package_name": "com.example.alertme"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "51636599168-si38eotif59nni4do0jb369fsdi4emgi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.alertme",
+            "certificate_hash": "2aa3dc268590e338fed8fbb93a134e3cad147b4f"
+          }
+        },
+        {
+          "client_id": "51636599168-4cf2jq132ktnmj6lor9q95qrpqor2n8o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHlrO9a8sEvisFczWAqEuTqueGIpZhNh0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "51636599168-4cf2jq132ktnmj6lor9q95qrpqor2n8o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

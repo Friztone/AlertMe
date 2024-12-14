@@ -1,13 +1,11 @@
 package com.example.alertme
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.webkit.WebStorage
+import android.content.SharedPreferences
+import android.webkit.CookieManager
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,11 +14,11 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,44 +26,78 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.ui.platform.LocalContext
-import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.auth
-import android.webkit.CookieManager
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
 
-    fun logoutUser(context: Context) {
-        // Hapus sesi Firebase
-        FirebaseAuth.getInstance().signOut()
+    val context = LocalContext.current
+    val sharedPreferences: SharedPreferences = remember {
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+    }
 
-        // Logout dari Google
-        val googleSignInClient = GoogleSignIn.getClient(
-            context,
-            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
-        )
-        googleSignInClient.signOut()
+    val authToken = sharedPreferences.getString("auth_token", null)
+    var userName by remember { mutableStateOf("User") }
 
-        // Hapus semua cookie (untuk aplikasi yang menggunakan WebView)
+    fun fetchUserName() {
+        if (authToken.isNullOrEmpty()) {
+            Toast.makeText(context, "Token tidak ditemukan. Silakan login ulang.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url("http://10.0.2.2:4000/me")
+            .addHeader("Authorization", "$authToken")
+            .build()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    val jsonObject = JSONObject(responseBody)
+                    val name = jsonObject.getString("name")
+
+                    CoroutineScope(Dispatchers.Main).launch {
+                        userName = name
+                    }
+                } else {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        Toast.makeText(context, "Gagal memuat nama pengguna: ${response.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        fetchUserName()
+    }
+
+    fun logoutUser() {
+        sharedPreferences.edit().remove("auth_token").apply()
+
         val cookieManager = CookieManager.getInstance()
         cookieManager.removeAllCookies(null)
         cookieManager.flush()
 
-        // Bersihkan cache aplikasi
-        context.cacheDir.deleteRecursively()
-
-        // Berikan konfirmasi logout kepada pengguna
         Toast.makeText(context, "Logout berhasil. Anda dapat login dengan akun lain.", Toast.LENGTH_SHORT).show()
+
+        navController.navigate("login") {
+            popUpTo(0)
+        }
     }
-
-
-    val context = LocalContext.current // Mendapatkan context untuk memulai Intent
 
     Scaffold(
         topBar = {
@@ -79,16 +111,13 @@ fun HomeScreen(navController: NavController) {
                     )
                 },
                 actions = {
-                    IconButton(onClick = {navController.navigate("settings")}) {
+                    IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(Icons.Filled.Build, contentDescription = "Settings", tint = Color.White)
                     }
                     IconButton(onClick = { /* Navigate to Notifications */ }) {
                         Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
-                    IconButton(onClick = {
-                        logoutUser(context)
-                        navController.navigate("login")
-                    }) {
+                    IconButton(onClick = { logoutUser() }) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout", tint = Color.White)
                     }
                 },
@@ -121,7 +150,7 @@ fun HomeScreen(navController: NavController) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Hi, John Doe",
+                            text = "Hi, $userName",
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF1A2B68)
@@ -135,14 +164,12 @@ fun HomeScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = {navController.navigate("guide")},
+                        onClick = { navController.navigate("guide") },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                         modifier = Modifier
                             .weight(1f)
-                            .shadow(2.dp, shape = RoundedCornerShape(12.dp))
                             .height(40.dp),
                         shape = RoundedCornerShape(12.dp)
-
                     ) {
                         Text(
                             text = "Panduan",
@@ -151,21 +178,15 @@ fun HomeScreen(navController: NavController) {
                         )
                     }
                     Button(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_DIAL).apply {
-                                data = Uri.parse("tel:119")
-                            }
-                            context.startActivity(intent)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5C5C)),
+                        onClick = { navController.navigate("history") },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5)),
                         modifier = Modifier
                             .weight(1f)
-                            .shadow(2.dp, shape = RoundedCornerShape(12.dp))
                             .height(40.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Darurat",
+                            text = "Riwayat",
                             color = Color.White,
                             fontWeight = FontWeight.Bold
 

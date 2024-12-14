@@ -1,13 +1,11 @@
 package com.example.alertme
 
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
@@ -18,7 +16,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -27,70 +27,64 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 
 @Composable
 fun LoginScreen(navController: NavController) {
-    val mContext = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
-    // Menyimpan nilai email dan password
     val emailState = remember { androidx.compose.runtime.mutableStateOf("") }
     val passwordState = remember { androidx.compose.runtime.mutableStateOf("") }
 
-    // FirebaseAuth instance
-    val auth = FirebaseAuth.getInstance()
+    fun loginUser(email: String, password: String) {
+        val client = OkHttpClient()
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val jsonBody = JSONObject().apply {
+            put("email", email)
+            put("password", password)
+        }.toString()
 
-    // Google Sign-In Client
-    val googleSignInClient = remember {
-        GoogleSignIn.getClient(
-            mContext,
-            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(mContext.getString(R.string.default_web_client_id))
-                .requestEmail()
-                .build()
-        )
-    }
+        val requestBody = jsonBody.toRequestBody(mediaType)
+        val request = Request.Builder()
+            .url("http://10.0.2.2:4000/login")
+            .post(requestBody)
+            .build()
 
-    // Launcher for Google Sign-In
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-        if (task.isSuccessful) {
-            val account = task.result
-            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-            auth.signInWithCredential(credential)
-                .addOnCompleteListener { signInTask ->
-                    if (signInTask.isSuccessful) {
-                        Toast.makeText(mContext, "Login berhasil: ${auth.currentUser?.email}", Toast.LENGTH_SHORT).show()
-                        navController.navigate("home") // Navigasi setelah login sukses
-                    } else {
-                        Toast.makeText(mContext, "Login gagal: ${signInTask.exception?.message}", Toast.LENGTH_SHORT).show()
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    val jsonResponse = JSONObject(responseBody ?: "{}")
+                    val token = jsonResponse.getString("token")
+
+                    // Simpan token ke SharedPreferences
+                    val sharedPreferences = context.getSharedPreferences("AppPreferences", 0)
+                    sharedPreferences.edit().putString("auth_token", token).apply()
+
+                    CoroutineScope(Dispatchers.Main).launch {
+                        Toast.makeText(context, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                        navController.navigate("home")
+                    }
+                } else {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        Toast.makeText(context, "Login gagal: ${response.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
-        } else {
-            Toast.makeText(mContext, "Login dengan Google gagal.", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    // Fungsi untuk login dengan Google
-    fun loginWithGoogle() {
-        val signInIntent = googleSignInClient.signInIntent
-        launcher.launch(signInIntent)
-    }
-
-    // Fungsi untuk login menggunakan email dan password
-    fun loginUser(email: String, password: String) {
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Toast.makeText(mContext, "Login berhasil! Selamat datang ${auth.currentUser?.email}", Toast.LENGTH_SHORT).show()
-                    navController.navigate("home") // Navigasi setelah sukses
-                } else {
-                    Toast.makeText(mContext, "Login gagal: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
     }
 
     Column(
@@ -110,19 +104,20 @@ fun LoginScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(30.dp))
 
         Text(
-            text = "Login to access amazing features!",
-            fontSize = 17.sp,
+            text = "Masuk",
+            fontSize = 32.sp,
             color = Color.Black,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Start,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier
+                .fillMaxWidth(),
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // BasicTextField untuk email
         BasicTextField(
             value = emailState.value,
             onValueChange = { emailState.value = it },
-            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, color = Color.Black),
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White, shape = RoundedCornerShape(21.dp))
@@ -131,7 +126,7 @@ fun LoginScreen(navController: NavController) {
             decorationBox = { innerTextField ->
                 if (emailState.value.isEmpty()) {
                     Text(
-                        text = "Email Address",
+                        text = "Email",
                         fontSize = 15.sp,
                         color = Color.Gray
                     )
@@ -142,11 +137,9 @@ fun LoginScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(21.dp))
 
-        // BasicTextField untuk password
         BasicTextField(
             value = passwordState.value,
             onValueChange = { passwordState.value = it },
-            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, color = Color.Black),
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White, shape = RoundedCornerShape(21.dp))
@@ -167,16 +160,15 @@ fun LoginScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(21.dp))
 
-        // Tombol LOGIN
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 when {
                     emailState.value.isEmpty() -> {
-                        Toast.makeText(mContext, "Masukkan email terlebih dahulu.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Masukkan email terlebih dahulu.", Toast.LENGTH_LONG).show()
                     }
                     passwordState.value.isEmpty() -> {
-                        Toast.makeText(mContext, "Masukkan password terlebih dahulu.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Masukkan password terlebih dahulu.", Toast.LENGTH_LONG).show()
                     }
                     else -> {
                         loginUser(emailState.value, passwordState.value)
@@ -190,35 +182,16 @@ fun LoginScreen(navController: NavController) {
         ) {
             Text(
                 modifier = Modifier.padding(7.dp),
-                text = "LOGIN",
+                text = "Masuk",
                 fontSize = 18.sp
             )
         }
 
         Spacer(modifier = Modifier.height(30.dp))
 
-        // Tombol Login dengan Google
-        Button(
-            onClick = { loginWithGoogle() },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(id = R.mipmap.google_logo_foreground),
-                    contentDescription = "Google Icon",
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Login with Google", color = Color.Black)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(30.dp))
-
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Don't have an account?",
+                text = "Belum punya akun?",
                 fontSize = 15.sp,
                 color = Color.Black
             )
@@ -227,7 +200,7 @@ fun LoginScreen(navController: NavController) {
                 contentPadding = PaddingValues(5.dp)
             ) {
                 Text(
-                    text = "Sign up now",
+                    text = "Daftar",
                     fontSize = 15.sp,
                     color = Color.Black,
                     textDecoration = TextDecoration.Underline
@@ -240,6 +213,6 @@ fun LoginScreen(navController: NavController) {
 @Preview
 @Composable
 fun PreviewLoginScreen() {
-    val navController = rememberNavController() // Membuat NavController untuk preview
+    val navController = rememberNavController()
     LoginScreen(navController = navController)
 }

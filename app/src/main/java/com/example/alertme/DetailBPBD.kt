@@ -1,31 +1,32 @@
 package com.example.alertme
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.alertme.ui.theme.AppTopBar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
 
 @Composable
 fun DetailBPBD(navController: NavController) {
@@ -37,6 +38,73 @@ fun DetailBPBD(navController: NavController) {
             )
         },
         content = { paddingValues ->
+            val bpbdLocations = remember { mutableStateListOf<Map<String, String>>() }
+            val context = LocalContext.current
+
+            // Function to fetch data from API with token
+            fun fetchBPBDLocations() {
+                val client = OkHttpClient()
+
+                // Retrieve token from SharedPreferences
+                val sharedPreferences = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                val token = sharedPreferences.getString("auth_token", null)
+
+                if (token.isNullOrEmpty()) {
+                    Toast.makeText(context, "Token tidak ditemukan. Silakan login ulang.", Toast.LENGTH_SHORT).show()
+                    navController.navigate("login")
+                    return
+                }
+
+                val request = Request.Builder()
+                    .url("http://10.0.2.2:4000/bpbd")
+                    .addHeader("Authorization", "$token")
+                    .build()
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val response = client.newCall(request).execute()
+                        if (response.isSuccessful) {
+                            val responseBody = response.body?.string()
+                            val jsonArray = JSONArray(responseBody)
+
+                            val locations = mutableListOf<Map<String, String>>()
+                            for (i in 0 until jsonArray.length()) {
+                                val jsonObject = jsonArray.getJSONObject(i)
+                                locations.add(
+                                    mapOf(
+                                        "uuid" to jsonObject.getString("uuid"),
+                                        "name" to jsonObject.getString("name"),
+                                        "alamat" to jsonObject.getString("alamat")
+                                    )
+                                )
+                            }
+
+                            CoroutineScope(Dispatchers.Main).launch {
+                                bpbdLocations.clear()
+                                bpbdLocations.addAll(locations)
+                            }
+                        } else {
+                            CoroutineScope(Dispatchers.Main).launch {
+                                Toast.makeText(
+                                    context,
+                                    "Gagal memuat data: ${response.message}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+
+            // Fetch data when composable is loaded
+            LaunchedEffect(Unit) {
+                fetchBPBDLocations()
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -45,19 +113,23 @@ fun DetailBPBD(navController: NavController) {
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Array Data Lokasi
-                val bpbdLocations = listOf(
-                    "BPBD Malang Kota" to "Jl. Bingkil No.1, Ciptomulyo, Kec. Sukun, Kota Malang, Jawa Timur 65148",
-                    "BPBD Kabupaten Malang" to "Jl. Panji Suroso No.7, Kec. Blimbing, Kota Malang, Jawa Timur 65126",
-                    "BPBD Provinsi Jawa Timur" to "Jl. Raya Karanglo No.1, Singosari, Kabupaten Malang, Jawa Timur 65153",
-                    "BPBD Indonesia" to "Jl. Letjen S. Parman No.87, Kec. Klojen, Kota Malang, Jawa Timur 65112",
-                    "BPBD Regional Jawa Timur" to "Jl. Soekarno Hatta No.9, Lowokwaru, Kota Malang, Jawa Timur 65141"
-                )
-
-                // Mapping Data ke UI
-                bpbdLocations.forEach { (name, address) ->
-                    FireStationCard(name = name, address = address)
-                    Spacer(modifier = Modifier.height(8.dp))
+                // Display BPBD locations
+                if (bpbdLocations.isEmpty()) {
+                    Text(
+                        text = "Memuat data...",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                } else {
+                    bpbdLocations.forEach { location ->
+                        BPBDCard(
+                            name = location["name"] ?: "",
+                            address = location["alamat"] ?: "",
+                            onClick = { navController.navigate("form/${location["uuid"]}") }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
             }
         }
@@ -65,11 +137,12 @@ fun DetailBPBD(navController: NavController) {
 }
 
 @Composable
-fun BPBDCard(name: String, address: String) {
+fun BPBDCard(name: String, address: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(4.dp)
@@ -90,8 +163,7 @@ fun BPBDCard(name: String, address: String) {
                 text = address,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
-                color = Color.Black,
-                textAlign = TextAlign.Start
+                color = Color.Black
             )
         }
     }
@@ -100,6 +172,6 @@ fun BPBDCard(name: String, address: String) {
 @Preview
 @Composable
 fun PreviewDetailBPBD() {
-    val navController = rememberNavController() // Preview with NavController
+    val navController = rememberNavController()
     DetailBPBD(navController = navController)
 }
